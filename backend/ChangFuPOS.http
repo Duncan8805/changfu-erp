@@ -1,0 +1,6 @@
+@ChangFuPOS_HostAddress = http://localhost:5252
+
+GET {{ChangFuPOS_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

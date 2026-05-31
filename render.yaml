@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: changfu-erp-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/rice-types
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false          # 在 Render dashboard 手動填入
+      - key: Jwt__Key
+        sync: false          # 在 Render dashboard 手動填入
+      - key: Jwt__Issuer
+        value: changfu-pos
+      - key: Jwt__Audience
+        value: changfu-pos-client
+      - key: Jwt__ExpireHours
+        value: "24"
