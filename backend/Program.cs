@@ -78,36 +78,55 @@ builder.Services.AddSwaggerGen();
 // ─── Build ────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// Auto-migrate + seed on startup
-using (var scope = app.Services.CreateScope())
+// Auto-migrate + seed on startup（含 retry，防止 MySQL 短暫不可用時 crash）
+var retries = 0;
+const int maxRetries = 5;
+while (retries < maxRetries)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
 
-    // Seed 今日牌價（第一次啟動時）
-    var today = DateOnly.FromDateTime(DateTime.Today);
-    var defaultPrices = new[]
-    {
-        new { RiceTypeId = 1, Price = 12.5m },
-        new { RiceTypeId = 2, Price = 13.2m },
-        new { RiceTypeId = 3, Price = 15.0m },
-        new { RiceTypeId = 4, Price = 16.8m },
-    };
-    foreach (var p in defaultPrices)
-    {
-        var exists = db.PriceLogs.Any(pl => pl.RiceTypeId == p.RiceTypeId && pl.PriceDate == today);
-        if (!exists)
+        // Seed 今日牌價（第一次啟動時）
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var defaultPrices = new[]
         {
-            db.PriceLogs.Add(new ChangFuPOS.Models.PriceLog
+            new { RiceTypeId = 1, Price = 12.5m },
+            new { RiceTypeId = 2, Price = 13.2m },
+            new { RiceTypeId = 3, Price = 15.0m },
+            new { RiceTypeId = 4, Price = 16.8m },
+        };
+        foreach (var p in defaultPrices)
+        {
+            var exists = db.PriceLogs.Any(pl => pl.RiceTypeId == p.RiceTypeId && pl.PriceDate == today);
+            if (!exists)
             {
-                RiceTypeId = p.RiceTypeId,
-                PriceDate  = today,
-                UnitPrice  = p.Price,
-                CreatedBy  = "system"
-            });
+                db.PriceLogs.Add(new ChangFuPOS.Models.PriceLog
+                {
+                    RiceTypeId = p.RiceTypeId,
+                    PriceDate  = today,
+                    UnitPrice  = p.Price,
+                    CreatedBy  = "system"
+                });
+            }
         }
+        db.SaveChanges();
+        break; // 成功，跳出 retry loop
     }
-    db.SaveChanges();
+    catch (Exception ex)
+    {
+        retries++;
+        Console.WriteLine($"[Startup] DB 連線失敗（第 {retries}/{maxRetries} 次）：{ex.Message}");
+        if (retries >= maxRetries)
+        {
+            Console.WriteLine("[Startup] 超過最大重試次數，繼續啟動（DB 功能暫時不可用）");
+            break;
+        }
+        Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retries))); // 2s, 4s, 8s, 16s, 32s
+    }
+}
 }
 
 if (app.Environment.IsDevelopment())
