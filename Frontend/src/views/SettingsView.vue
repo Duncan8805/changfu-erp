@@ -259,6 +259,64 @@
         </div>
       </template>
 
+      <!-- ── Tab: 備註選項 ───────────────────────────────────── -->
+      <template v-if="activeTab === 'note-presets'">
+        <div class="glass overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <div>
+              <h2 class="text-sm font-semibold text-gray-300">備註快速選項</h2>
+              <p class="text-xs text-gray-600 mt-0.5">在傳票備註欄顯示為快速選項按鈕</p>
+            </div>
+          </div>
+
+          <!-- Add form -->
+          <div class="px-5 py-4 border-b border-white/10">
+            <div class="flex gap-2">
+              <input
+                id="new-note-preset"
+                v-model="newPresetContent"
+                type="text"
+                class="input-base flex-1"
+                placeholder="例：雨天潜水/含沙/蜀害..."
+                maxlength="50"
+                @keydown.enter="addPreset"
+              />
+              <button class="btn-primary btn-sm" :disabled="!newPresetContent.trim()" @click="addPreset">
+                + 新增
+              </button>
+            </div>
+            <p v-if="presetError" class="text-red-400 text-xs mt-1">{{ presetError }}</p>
+          </div>
+
+          <!-- List -->
+          <div v-if="npLoading" class="p-6 space-y-3">
+            <div v-for="i in 3" :key="i" class="h-10 bg-white/5 rounded-lg animate-pulse"></div>
+          </div>
+          <div v-else class="divide-y divide-white/5">
+            <div
+              v-for="p in notePresets"
+              :key="p.id"
+              class="flex items-center justify-between px-5 py-3 hover:bg-white/3 transition-colors"
+            >
+              <span class="text-sm text-gray-200">{{ p.content }}</span>
+              <button
+                class="btn-ghost p-1.5 text-gray-600 hover:text-red-400"
+                title="刪除"
+                @click="deletePreset(p.id)"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+            <div v-if="notePresets.length === 0" class="py-10 text-center text-gray-600 text-sm">
+              尚無備註選項，請新增
+            </div>
+          </div>
+        </div>
+      </template>
+
     </div>
   </div>
 
@@ -333,6 +391,7 @@ const activeTab  = ref('rice-types')
 const tabs = [
   { id: 'rice-types', label: '米種管理' },
   { id: 'prices',     label: '牌價設定' },
+  { id: 'note-presets', label: '備註選項' },
 ]
 
 // ─── Rice type management ─────────────────────────────────────
@@ -445,8 +504,46 @@ async function savePrice(riceTypeId) {
   }
 }
 
+// ─── Note Presets ────────────────────────────────────────────
+const notePresets     = ref([])
+const newPresetContent = ref('')
+const presetError      = ref('')
+const npLoading        = ref(false)
+
+async function loadPresets() {
+  npLoading.value = true
+  try {
+    const { data } = await api.get('/note-presets')
+    notePresets.value = data
+  } finally {
+    npLoading.value = false
+  }
+}
+
+async function addPreset() {
+  if (!newPresetContent.value.trim()) return
+  presetError.value = ''
+  try {
+    await api.post('/note-presets', { content: newPresetContent.value.trim(), sortOrder: 0 })
+    newPresetContent.value = ''
+    await loadPresets()
+  } catch (e) {
+    presetError.value = e.response?.data?.message || '新增失敗'
+  }
+}
+
+async function deletePreset(id) {
+  try {
+    await api.delete(`/note-presets/${id}`)
+    notePresets.value = notePresets.value.filter(p => p.id !== id)
+  } catch (e) {
+    presetError.value = e.response?.data?.message || '刪除失敗'
+  }
+}
+
 onMounted(async () => {
   await rtStore.fetchRiceTypes()
   await loadPriceLogs()
+  await loadPresets()
 })
 </script>

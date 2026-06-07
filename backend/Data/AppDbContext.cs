@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<PriceLog> PriceLogs => Set<PriceLog>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<NotePreset> NotePresets => Set<NotePreset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

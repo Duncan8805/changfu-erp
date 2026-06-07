@@ -91,14 +91,14 @@
             <!-- 未結算：手動輸入，4位數自動換算 -->
             <div class="flex items-end gap-3">
               <div class="flex-1">
-                <label class="form-label" for="price-raw-input">輸入單價（阿公報4位數）</label>
+                <label class="form-label" for="price-raw-input">單價（元/台斤）</label>
                 <input
                   id="price-raw-input"
                   v-model.number="priceRaw"
                   type="number"
                   inputmode="numeric"
                   pattern="[0-9]*"
-                  placeholder="例：1105"
+                  placeholder="1105"
                   class="input-base text-lg font-mono"
                   min="0"
                   max="999999"
@@ -115,19 +115,34 @@
                 <p class="text-[10px] text-gray-500">/ 台斤</p>
               </div>
             </div>
-            <p class="text-xs text-gray-600 mt-1.5">輸入 1105 → 顯示 $11.05／台斤</p>
+                <p class="text-[10px] text-gray-500 mt-1">輸入4位數自動換算，例：1105 → $11.05</p>
           </div>
         </div>
 
         <!-- Note -->
-        <div class="glass p-4">
+        <div class="glass p-4 space-y-2">
           <label class="form-label" for="field-note">備註</label>
+
+          <!-- 快速備註 chips -->
+          <div v-if="notePresets.length > 0 && !isSettled" class="flex flex-wrap gap-1.5">
+            <button
+              v-for="p in notePresets"
+              :key="p.id"
+              type="button"
+              class="px-2.5 py-1 text-xs rounded-full border border-white/15 bg-white/5
+                     hover:bg-white/10 hover:border-white/30 text-gray-300 transition-colors"
+              @click="appendNote(p.content)"
+            >
+              {{ p.content }}
+            </button>
+          </div>
+
           <textarea
             id="field-note"
             v-model="form.note"
             class="input-base resize-none"
             rows="2"
-            placeholder="備註事項（選填）"
+            placeholder="備註事項（選填，可點選上方快速選項）"
             :disabled="isSettled"
           />
         </div>
@@ -184,9 +199,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useVehicleStore } from '@/stores/vehicles'
 import { useWeightCalc } from '@/composables/useWeightCalc'
+import api from '@/api'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import WeightSection from './WeightSection.vue'
 import CheckoutBar from './CheckoutBar.vue'
@@ -238,7 +254,20 @@ watch(ticket, (t) => {
   showConfirmSheet.value = false
 }, { immediate: true })
 
-// ─── Preview calculations (for CheckoutBar) ───────────────────
+// ─── Note presets ─────────────────────────────────────────────
+const notePresets = ref([])
+onMounted(async () => {
+  try {
+    const { data } = await api.get('/note-presets')
+    notePresets.value = data
+  } catch { /* 靜默失敗 */ }
+})
+
+function appendNote(text) {
+  const cur = form.value.note?.trim() || ''
+  form.value.note = cur ? `${cur}，${text}` : text
+}
+
 const grossRef = computed(() => form.value.grossWeightKg)
 const tareRef  = computed(() => form.value.tareWeightKg)
 const priceRef = computed(() => currentUnitPrice.value)
