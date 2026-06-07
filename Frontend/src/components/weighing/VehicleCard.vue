@@ -44,10 +44,10 @@
       </div>
     </button>
 
-    <!-- 刪單按鈕：hover 時顯示，已結算不顯示 -->
+    <!-- 刪單按鈕：hover 時顯示於右下角，已結算不顯示 -->
     <button
       v-if="ticket.status !== 'settled'"
-      class="absolute top-2 right-2 w-6 h-6 rounded-md flex items-center justify-center
+      class="absolute bottom-2 right-2 w-6 h-6 rounded-md flex items-center justify-center
              opacity-0 group-hover:opacity-100 transition-opacity duration-150
              bg-red-500/20 hover:bg-red-500/50 text-red-400 hover:text-red-200"
       title="刪除此傳票"
