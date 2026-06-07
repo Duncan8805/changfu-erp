@@ -127,7 +127,6 @@ while (retries < maxRetries)
         Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, retries))); // 2s, 4s, 8s, 16s, 32s
     }
 }
-}
 
 if (app.Environment.IsDevelopment())
 {
