@@ -2,16 +2,17 @@
   <div class="h-[calc(100vh-3.5rem)] overflow-y-auto">
     <div class="max-w-6xl mx-auto p-6 space-y-6">
 
-      <!-- Page header -->
-      <div class="flex items-center justify-between">
-        <div>
+      <!-- Page header：小螢幕垂直堆疊，大螢幕水平排列 -->
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div class="flex-1 min-w-0">
           <h1 class="text-2xl font-bold text-white">營運報表</h1>
           <p class="text-sm text-gray-500 mt-0.5">查詢結算傳票統計與明細</p>
         </div>
 
-        <!-- Date range filter -->
-        <div class="flex items-center gap-2">
-          <div class="flex items-center gap-2 glass px-3 py-2">
+        <!-- 篩選控制列：允許換行 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 日期區間 -->
+          <div class="flex items-center gap-2 glass px-3 py-2 flex-shrink-0">
             <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -31,19 +32,21 @@
             />
           </div>
 
-          <div class="flex items-center gap-1.5">
+          <!-- 快捷範圍 -->
+          <div class="flex items-center gap-1">
             <button class="btn-ghost btn-sm" @click="setRange('today')">今日</button>
             <button class="btn-ghost btn-sm" @click="setRange('week')">本週</button>
             <button class="btn-ghost btn-sm" @click="setRange('month')">本月</button>
           </div>
 
-          <!-- Exception filter -->
+          <!-- 例外單篩選 -->
           <label class="flex items-center gap-1.5 cursor-pointer select-none">
             <input id="exception-filter" v-model="filterException" type="checkbox"
               class="w-3.5 h-3.5 rounded accent-red-500" />
-            <span class="text-xs text-gray-400">僅例外單</span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">僅例外單</span>
           </label>
 
+          <!-- 查詢按鈕 -->
           <button id="search-btn" class="btn-primary btn-sm" :disabled="loading" @click="loadData">
             <svg v-if="loading" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
