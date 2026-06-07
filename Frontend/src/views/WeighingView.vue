@@ -23,8 +23,9 @@ const vehicleStore  = useVehicleStore()
 const riceTypeStore = useRiceTypeStore()
 
 onMounted(async () => {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
   await Promise.all([
-    vehicleStore.fetchVehicles(),
+    vehicleStore.fetchVehicles({ dateFrom: today, dateTo: today }),
     riceTypeStore.fetchRiceTypes(),
   ])
 })

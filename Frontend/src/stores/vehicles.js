@@ -79,6 +79,12 @@ export const useVehicleStore = defineStore('vehicles', () => {
     activeVehicleId.value = id
   }
 
+  async function deleteVehicle(id) {
+    await api.delete(`/tickets/${id}`)
+    vehicles.value = vehicles.value.filter(v => v.id !== id)
+    if (activeVehicleId.value === id) activeVehicleId.value = null
+  }
+
   function setFilterStatus(status) {
     filterStatus.value = status
   }
@@ -93,7 +99,7 @@ export const useVehicleStore = defineStore('vehicles', () => {
     vehicles, activeVehicleId, filterStatus, loading, error,
     activeVehicle, filteredVehicles, pendingCount, unloadingCount,
     settledVehicles, activeVehicles,
-    fetchVehicles, addVehicle, updateTicket, updateStatus, settleTicket,
+    fetchVehicles, addVehicle, updateTicket, updateStatus, settleTicket, deleteVehicle,
     setActiveVehicle, setFilterStatus,
   }
 })

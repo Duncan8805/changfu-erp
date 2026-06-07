@@ -242,4 +242,19 @@ public class TicketsController : ControllerBase
 
         return Ok(MapToDto(ticket));
     }
+
+    // ─── DELETE /api/tickets/{id} ────────────────────────────────
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ticket = await _db.Tickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        if (ticket.Status == "settled")
+            return Conflict(new { message = "已結算的傳票無法刪除" });
+
+        _db.Tickets.Remove(ticket);
+        await _db.SaveChangesAsync();
+        return NoContent(); // 204
+    }
 }
