@@ -51,6 +51,7 @@ public class TicketsController : ControllerBase
     {
         var query = _db.Tickets
             .Include(t => t.RiceType)
+            .Where(t => !t.IsDeleted)   // 排除軟刪除
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(status))
@@ -202,48 +203,75 @@ public class TicketsController : ControllerBase
     {
         var ticket = await _db.Tickets
             .Include(t => t.RiceType)
-            .FirstOrDefaultAsync(t => t.Id == id);
+            .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
 
         if (ticket == null) return NotFound();
 
         if (ticket.Status == "settled")
             return BadRequest(new { message = "此傳票已結算" });
 
+        if (request.PriceOverride <= 0)
+            return BadRequest(new { message = "單價必須大於 0" });
+
         // 例外單必須有原因
         if (request.IsException && string.IsNullOrWhiteSpace(request.ExceptionReason))
             return BadRequest(new { message = "例外單價必須填寫例外原因" });
 
-        // 查今日牌價
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var priceLog = await _db.PriceLogs
-            .FirstOrDefaultAsync(p => p.RiceTypeId == request.RiceTypeId && p.PriceDate == today);
-
-        if (priceLog == null)
-            return BadRequest(new { message = "找不到今日牌價，請先設定牌價" });
-
-        // 更新傳票欄位
-        ticket.RiceTypeId = request.RiceTypeId;
+        // 直接使用使用者輸入的單價（不查牌價表）
+        ticket.PriceSnapshot = request.PriceOverride;
         ticket.IsException = request.IsException;
         ticket.ExceptionReason = request.ExceptionReason;
         ticket.Note = request.Note;
-        ticket.PriceSnapshot = priceLog.UnitPrice;
 
         // 重算（確保後端數字為準）
-        ticket.NetWeightKg = ticket.GrossWeightKg - ticket.TareWeightKg;
+        ticket.NetWeightKg  = ticket.GrossWeightKg - ticket.TareWeightKg;
         ticket.NetWeightJin = Math.Round(ticket.NetWeightKg / 0.6m, 0);
-        ticket.TotalAmount = Math.Round(ticket.NetWeightJin * ticket.PriceSnapshot, 2);
+        ticket.TotalAmount  = Math.Round(ticket.NetWeightJin * ticket.PriceSnapshot, 2);
 
-        ticket.Status = "settled";
+        ticket.Status    = "settled";
         ticket.SettledAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-
         await _db.Entry(ticket).Reference(t => t.RiceType).LoadAsync();
 
         return Ok(MapToDto(ticket));
     }
 
-    // ─── DELETE /api/tickets/{id} ────────────────────────────────
+    // ─── GET /api/tickets/trash ──────────────────────────────────
+    [HttpGet("trash")]
+    public async Task<IActionResult> GetTrash()
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-7);
+        var trashed = await _db.Tickets
+            .Include(t => t.RiceType)
+            .Where(t => t.IsDeleted && t.DeletedAt >= cutoff)
+            .OrderByDescending(t => t.DeletedAt)
+            .ToListAsync();
+        return Ok(trashed.Select(MapToDto));
+    }
+
+    // ─── POST /api/tickets/{id}/restore ─────────────────────────
+    [HttpPost("{id:int}/restore")]
+    public async Task<IActionResult> Restore(int id)
+    {
+        var ticket = await _db.Tickets
+            .Include(t => t.RiceType)
+            .FirstOrDefaultAsync(t => t.Id == id && t.IsDeleted);
+
+        if (ticket == null) return NotFound();
+
+        var cutoff = DateTime.UtcNow.AddDays(-7);
+        if (ticket.DeletedAt < cutoff)
+            return Conflict(new { message = "已超過 7 天，無法恢復" });
+
+        ticket.IsDeleted = false;
+        ticket.DeletedAt = null;
+        await _db.SaveChangesAsync();
+
+        return Ok(MapToDto(ticket));
+    }
+
+    // ─── DELETE /api/tickets/{id}（軟刪除，7天可恢復）────────────
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -253,7 +281,8 @@ public class TicketsController : ControllerBase
         if (ticket.Status == "settled")
             return Conflict(new { message = "已結算的傳票無法刪除" });
 
-        _db.Tickets.Remove(ticket);
+        ticket.IsDeleted = true;
+        ticket.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return NoContent(); // 204
     }

@@ -47,4 +47,8 @@ public class Ticket
     public string CreatedBy { get; set; } = "";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // ─── Soft Delete ──────────────────────────────────────────────
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
 }

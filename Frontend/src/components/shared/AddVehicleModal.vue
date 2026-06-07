@@ -77,16 +77,17 @@
               </div>
 
               <div>
-                <label class="form-label" for="new-gross-weight">總重 (kg)</label>
+                <label class="form-label" for="new-gross-weight">總重 (kg) <span class="text-red-400">*</span></label>
                 <input
                   id="new-gross-weight"
                   v-model="form.grossWeightKg"
                   type="number"
-                  inputmode="decimal"
+                  inputmode="numeric"
                   class="input-base"
                   placeholder="0"
-                  min="0"
-                  step="0.1"
+                  min="1"
+                  step="1"
+                  required
                   @focus="$event.target.select()"
                 />
               </div>
@@ -147,6 +148,11 @@ function close() {
 
 async function handleSubmit() {
   if (!form.value.vehicleNo.trim()) return
+  const gross = parseFloat(form.value.grossWeightKg) || 0
+  if (gross <= 0) {
+    error.value = '請輸入總重'
+    return
+  }
 
   loading.value = true
   error.value   = ''
@@ -155,7 +161,7 @@ async function handleSubmit() {
       vehicleNo:    form.value.vehicleNo.trim(),
       farmerName:   form.value.farmerName.trim(),
       village:      form.value.village.trim(),
-      grossWeightKg: parseFloat(form.value.grossWeightKg) || 0,
+      grossWeightKg: gross,
     })
     emit('update:modelValue', false)
   } catch (e) {

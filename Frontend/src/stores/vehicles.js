@@ -89,6 +89,18 @@ export const useVehicleStore = defineStore('vehicles', () => {
     filterStatus.value = status
   }
 
+  async function fetchTrashed() {
+    const { data } = await api.get('/tickets/trash')
+    return data
+  }
+
+  async function restoreVehicle(id) {
+    const { data } = await api.post(`/tickets/${id}/restore`)
+    // 恢復後加回今日列表
+    vehicles.value.push(data)
+    return data
+  }
+
   // ─── Internal helpers ─────────────────────────────────────
   function _replaceInList(ticket) {
     const idx = vehicles.value.findIndex(v => v.id === ticket.id)
@@ -100,6 +112,7 @@ export const useVehicleStore = defineStore('vehicles', () => {
     activeVehicle, filteredVehicles, pendingCount, unloadingCount,
     settledVehicles, activeVehicles,
     fetchVehicles, addVehicle, updateTicket, updateStatus, settleTicket, deleteVehicle,
+    fetchTrashed, restoreVehicle,
     setActiveVehicle, setFilterStatus,
   }
 })

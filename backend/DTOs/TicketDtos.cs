@@ -57,7 +57,7 @@ public class UpdateStatusRequest
 // ─── Settle Request ──────────────────────────────────────────────
 public class SettleTicketRequest
 {
-    public int RiceTypeId { get; set; }
+    public decimal PriceOverride { get; set; }   // 使用者直接輸入的單價（例：11.05）
     public bool IsException { get; set; }
     public string? ExceptionReason { get; set; }
     public string? Note { get; set; }

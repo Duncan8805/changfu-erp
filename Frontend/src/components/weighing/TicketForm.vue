@@ -29,7 +29,6 @@
           </div>
           <div class="flex items-center gap-2">
             <StatusBadge :status="ticket.status" />
-            <!-- Status advance button -->
             <button
               v-if="ticket.status === 'unloading'"
               class="btn-secondary btn-sm"
@@ -75,20 +74,49 @@
           />
         </div>
 
-        <!-- Rice type section -->
-        <div class="glass p-4">
-          <RiceTypeSection
-            ref="riceRef"
-            :rice-type-id="form.riceTypeId"
-            :price-snapshot="ticket.priceSnapshot"
-            :is-exception-prop="form.isException"
-            :exception-reason-prop="form.exceptionReason"
-            :is-settled="isSettled"
-            @update:riceTypeId="form.riceTypeId = $event"
-            @update:unitPrice="currentUnitPrice = $event"
-            @update:isException="form.isException = $event"
-            @update:exceptionReason="form.exceptionReason = $event"
-          />
+        <!-- 單價區塊（取代原本米種區） -->
+        <div class="glass p-4 space-y-3">
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">單價</h3>
+
+          <div v-if="isSettled">
+            <!-- 已結算：顯示快照 -->
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-mono font-bold text-brand-300">
+                $ {{ ticket.priceSnapshot }}
+              </span>
+              <span class="text-sm text-gray-500">/ 台斤</span>
+            </div>
+          </div>
+          <div v-else>
+            <!-- 未結算：手動輸入，4位數自動換算 -->
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label class="form-label" for="price-raw-input">輸入單價（阿公報4位數）</label>
+                <input
+                  id="price-raw-input"
+                  v-model.number="priceRaw"
+                  type="number"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="例：1105"
+                  class="input-base text-lg font-mono"
+                  min="0"
+                  max="999999"
+                  step="1"
+                  :disabled="isSettled"
+                  @focus="$event.target.select()"
+                />
+              </div>
+              <div class="glass px-4 py-3 text-center flex-shrink-0 min-w-[100px]">
+                <p class="text-[10px] text-gray-500 mb-0.5">換算後單價</p>
+                <p class="text-xl font-mono font-bold" :class="currentUnitPrice > 0 ? 'text-brand-300' : 'text-gray-600'">
+                  $ {{ currentUnitPrice > 0 ? currentUnitPrice.toFixed(2) : '—' }}
+                </p>
+                <p class="text-[10px] text-gray-500">/ 台斤</p>
+              </div>
+            </div>
+            <p class="text-xs text-gray-600 mt-1.5">輸入 1105 → 顯示 $11.05／台斤</p>
+          </div>
         </div>
 
         <!-- Note -->
@@ -145,8 +173,8 @@
         :ticket="previewTicket"
         :unit-price="currentUnitPrice ?? 0"
         :total-amount="previewTotal"
-        :is-exception="form.isException"
-        :exception-reason="form.exceptionReason"
+        :is-exception="false"
+        :exception-reason="''"
         :loading="settleLoading"
         @confirm="doSettle"
         @cancel="showConfirmSheet = false"
@@ -158,16 +186,13 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useVehicleStore } from '@/stores/vehicles'
-import { useRiceTypeStore } from '@/stores/riceTypes'
 import { useWeightCalc } from '@/composables/useWeightCalc'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import WeightSection from './WeightSection.vue'
-import RiceTypeSection from './RiceTypeSection.vue'
 import CheckoutBar from './CheckoutBar.vue'
 import SettleConfirmSheet from './SettleConfirmSheet.vue'
 
-const store         = useVehicleStore()
-const riceTypeStore = useRiceTypeStore()
+const store = useVehicleStore()
 
 const ticket    = computed(() => store.activeVehicle)
 const isSettled = computed(() => ticket.value?.status === 'settled')
@@ -175,63 +200,48 @@ const isSettled = computed(() => ticket.value?.status === 'settled')
 // ─── Form state ───────────────────────────────────────────────
 const form = ref({
   vehicleNo: '', farmerName: '', village: '',
-  grossWeightKg: 0, tareWeightKg: 0,
-  riceTypeId: null, isException: false, exceptionReason: '', note: '',
+  grossWeightKg: 0, tareWeightKg: 0, note: '',
 })
 
-const currentUnitPrice  = ref(null)
-const showConfirmSheet  = ref(false)
-const settleLoading     = ref(false)
+// ─── 單價：4位原始輸入 → 除以100得實際單價 ────────────────────
+// e.g., priceRaw = 1105 → currentUnitPrice = 11.05
+const priceRaw = ref(0)
+const currentUnitPrice = computed(() => {
+  const v = Number(priceRaw.value) || 0
+  return Math.round(v) / 100
+})
 
-// Template refs
+const showConfirmSheet = ref(false)
+const settleLoading    = ref(false)
+
 const weightRef = ref(null)
-const riceRef   = ref(null)
 
 // ─── Sync form when active ticket changes ─────────────────────
 watch(ticket, (t) => {
   if (!t) return
   form.value = {
-    vehicleNo:      t.vehicleNo     ?? '',
-    farmerName:     t.farmerName    ?? '',
-    village:        t.village       ?? '',
-    grossWeightKg:  t.grossWeightKg ?? 0,
-    tareWeightKg:   t.tareWeightKg  ?? 0,
-    riceTypeId:     t.riceTypeId    ?? null,
-    isException:    t.isException   ?? false,
-    exceptionReason: t.exceptionReason ?? '',
-    note:           t.note          ?? '',
+    vehicleNo:    t.vehicleNo    ?? '',
+    farmerName:   t.farmerName   ?? '',
+    village:      t.village      ?? '',
+    grossWeightKg: t.grossWeightKg ?? 0,
+    tareWeightKg:  t.tareWeightKg  ?? 0,
+    note:          t.note          ?? '',
   }
 
-  // 已結算：用快照單價；未結算：從 store 查今日牌價
+  // 已結算：從快照恢復（priceSnapshot * 100 → raw）
   if (t.status === 'settled' && t.priceSnapshot) {
-    currentUnitPrice.value = t.priceSnapshot
-  } else if (t.riceTypeId) {
-    const rt = riceTypeStore.riceTypes.find(r => r.id === t.riceTypeId)
-    currentUnitPrice.value = rt?.todayPrice ?? null
+    priceRaw.value = Math.round(t.priceSnapshot * 100)
   } else {
-    currentUnitPrice.value = null
+    priceRaw.value = 0
   }
 
   showConfirmSheet.value = false
 }, { immediate: true })
 
-// 若 riceTypes 比 ticket 晚載入（非同步），補設單價
-watch(() => riceTypeStore.riceTypes, (types) => {
-  if (!types.length) return
-  const t = ticket.value
-  if (!t || t.status === 'settled' || currentUnitPrice.value != null) return
-  if (t.riceTypeId) {
-    const rt = types.find(r => r.id === t.riceTypeId)
-    if (rt?.todayPrice != null) currentUnitPrice.value = rt.todayPrice
-  }
-}, { deep: false })
-
 // ─── Preview calculations (for CheckoutBar) ───────────────────
-// 注意：useWeightCalc 吃的是 ref-like 物件（.value = 數字），
-// 不能包成 computed(() => ({ value: X }))，那樣 .value 會是物件而非數字
 const grossRef = computed(() => form.value.grossWeightKg)
 const tareRef  = computed(() => form.value.tareWeightKg)
-const priceRef = computed(() => currentUnitPrice.value ?? 0)
+const priceRef = computed(() => currentUnitPrice.value)
 
 const { netJin: previewJin, totalAmount: previewTotal, weightError } = useWeightCalc(grossRef, tareRef, priceRef)
 
@@ -247,15 +257,12 @@ async function saveDraft() {
   if (!ticket.value) return
   try {
     await store.updateTicket(ticket.value.id, {
-      vehicleNo:       form.value.vehicleNo,
-      farmerName:      form.value.farmerName,
-      village:         form.value.village,
-      riceTypeId:      form.value.riceTypeId,
-      grossWeightKg:   form.value.grossWeightKg,
-      tareWeightKg:    form.value.tareWeightKg,
-      isException:     form.value.isException,
-      exceptionReason: form.value.exceptionReason,
-      note:            form.value.note,
+      vehicleNo:     form.value.vehicleNo,
+      farmerName:    form.value.farmerName,
+      village:       form.value.village,
+      grossWeightKg: form.value.grossWeightKg,
+      tareWeightKg:  form.value.tareWeightKg,
+      note:          form.value.note,
     })
   } catch (e) {
     console.error('Save draft failed:', e)
@@ -273,18 +280,16 @@ async function advanceStatus() {
 function onSettleClick() {
   if (!ticket.value) return
 
-  // 1. Weight error check
   if (weightError.value) {
     alert('空重不能大於總重，請確認後再結算')
     return
   }
 
-  // 2. Exception reason check
-  if (form.value.isException && !riceRef.value?.validateReason()) {
+  if (currentUnitPrice.value <= 0) {
+    alert('請輸入單價後再結算')
     return
   }
 
-  // 3. Show confirm sheet
   showConfirmSheet.value = true
 }
 
@@ -293,22 +298,19 @@ async function doSettle() {
   if (!ticket.value) return
   settleLoading.value = true
   try {
-    // Save latest form data first
     await store.updateTicket(ticket.value.id, {
-      vehicleNo:       form.value.vehicleNo,
-      farmerName:      form.value.farmerName,
-      village:         form.value.village,
-      grossWeightKg:   form.value.grossWeightKg,
-      tareWeightKg:    form.value.tareWeightKg,
-      riceTypeId:      form.value.riceTypeId,
-      note:            form.value.note,
+      vehicleNo:     form.value.vehicleNo,
+      farmerName:    form.value.farmerName,
+      village:       form.value.village,
+      grossWeightKg: form.value.grossWeightKg,
+      tareWeightKg:  form.value.tareWeightKg,
+      note:          form.value.note,
     })
 
     await store.settleTicket(ticket.value.id, {
-      riceTypeId:      form.value.riceTypeId,
-      isException:     form.value.isException,
-      exceptionReason: form.value.exceptionReason,
-      note:            form.value.note,
+      priceOverride: currentUnitPrice.value,   // 直接傳換算後的單價（例：11.05）
+      isException:   false,
+      note:          form.value.note,
     })
 
     showConfirmSheet.value = false
