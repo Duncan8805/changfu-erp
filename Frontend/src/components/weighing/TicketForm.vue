@@ -94,17 +94,15 @@
                 <label class="form-label" for="price-raw-input">單價（元/台斤）</label>
                 <input
                   id="price-raw-input"
-                  v-model.number="priceRaw"
-                  type="number"
+                  :value="priceRaw || ''"
+                  type="tel"
                   inputmode="numeric"
                   pattern="[0-9]*"
                   placeholder="1105"
                   class="input-base text-lg font-mono"
-                  min="0"
-                  max="999999"
-                  step="1"
                   :disabled="isSettled"
                   @focus="$event.target.select()"
+                  @input="priceRaw = parseInt($event.target.value.replace(/\D/g,'')) || 0"
                 />
               </div>
               <div class="glass px-4 py-3 text-center flex-shrink-0 min-w-[100px]">

@@ -81,8 +81,9 @@
                 <input
                   id="new-gross-weight"
                   v-model="form.grossWeightKg"
-                  type="number"
+                  type="tel"
                   inputmode="numeric"
+                  pattern="[0-9]*"
                   class="input-base"
                   placeholder="0"
                   min="1"

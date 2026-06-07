@@ -11,7 +11,7 @@
           <input
             id="gross-weight"
             v-model="grossKgModel"
-            type="number"
+            type="tel"
             inputmode="numeric"
             pattern="[0-9]*"
             placeholder="0"
@@ -30,7 +30,7 @@
           <input
             id="tare-weight"
             v-model="tareKgModel"
-            type="number"
+            type="tel"
             inputmode="numeric"
             pattern="[0-9]*"
             placeholder="0"
