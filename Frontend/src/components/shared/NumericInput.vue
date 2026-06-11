@@ -48,10 +48,15 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change'])
 
-// ─── Touch 偵測 ────────────────────────────────────────────────
+// ─── iPad 偵測 ─────────────────────────────────────────────────
+// 舊版 iPad (iPadOS < 13)：UA 含 "iPad"
+// 新版 iPad (iPadOS 13+)：UA 含 "Macintosh" 但有觸控 (maxTouchPoints > 1)
 const isTouchDevice = ref(false)
 onMounted(() => {
-  isTouchDevice.value = window.matchMedia('(pointer: coarse)').matches
+  const ua = navigator.userAgent
+  const oldIPad = /iPad/.test(ua)
+  const newIPad = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1
+  isTouchDevice.value = oldIPad || newIPad
 })
 
 // ─── 鍵盤互動 ─────────────────────────────────────────────────
