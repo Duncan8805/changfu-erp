@@ -324,6 +324,12 @@ function onSettleClick() {
 async function doSettle() {
   if (!ticket.value) return
   settleLoading.value = true
+
+  // ⚠️ 必須在 await 之前先捕捉單價！
+  // 因為 store.updateTicket() 執行後，watch(ticket) 會重新觸發
+  // 並把 priceRaw reset 成 0，導致 currentUnitPrice 變成 0
+  const capturedPrice = currentUnitPrice.value
+
   try {
     await store.updateTicket(ticket.value.id, {
       vehicleNo:     form.value.vehicleNo,
@@ -335,7 +341,7 @@ async function doSettle() {
     })
 
     await store.settleTicket(ticket.value.id, {
-      priceOverride: currentUnitPrice.value,   // 直接傳換算後的單價（例：11.05）
+      priceOverride: capturedPrice,   // 使用捕捉值，不受 watch reset 影響
       isException:   false,
       note:          form.value.note,
     })
