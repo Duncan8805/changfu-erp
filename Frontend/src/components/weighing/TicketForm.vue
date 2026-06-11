@@ -91,17 +91,15 @@
             <!-- 未結算：手動輸入，4位數自動換算 -->
             <div class="flex items-end gap-3">
               <div class="flex-1">
-                <label class="form-label" for="price-raw-input">單價（元/台斤）</label>
-                <input
-                  id="price-raw-input"
-                  :value="priceRaw || ''"
-                  type="tel"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  class="input-base text-lg font-mono"
+                <label class="form-label">單價（元/台斤）</label>
+                <NumericInput
+                  :model-value="priceRaw"
+                  label="單價（元/台斤）"
+                  placeholder="請輸入"
+                  :max-digits="6"
                   :disabled="isSettled"
-                  @focus="$event.target.select()"
-                  @input="priceRaw = parseInt($event.target.value.replace(/\D/g,'')) || 0"
+                  :sub-formatter="priceSubFormatter"
+                  @update:model-value="priceRaw = $event"
                 />
               </div>
               <div class="glass px-4 py-3 text-center flex-shrink-0 min-w-[100px]">
@@ -199,6 +197,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useVehicleStore } from '@/stores/vehicles'
 import { useWeightCalc } from '@/composables/useWeightCalc'
 import api from '@/api'
+import NumericInput from '@/components/shared/NumericInput.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import WeightSection from './WeightSection.vue'
 import CheckoutBar from './CheckoutBar.vue'
@@ -215,13 +214,16 @@ const form = ref({
   grossWeightKg: 0, tareWeightKg: 0, note: '',
 })
 
-// ─── 單價：4位原始輸入 → 除以100得實際單價 ────────────────────
-// e.g., priceRaw = 1105 → currentUnitPrice = 11.05
+// ─── 單價─────────────────────────────────────────────
 const priceRaw = ref(0)
 const currentUnitPrice = computed(() => {
   const v = Number(priceRaw.value) || 0
   return Math.round(v) / 100
 })
+
+// 鍵盤副標題：顯示換算後單價
+const priceSubFormatter = (num) =>
+  num > 0 ? `→ $${(num / 100).toFixed(2)} / 台斤` : ''
 
 const showConfirmSheet = ref(false)
 const settleLoading    = ref(false)

@@ -78,18 +78,12 @@
 
               <div>
                 <label class="form-label" for="new-gross-weight">總重 (kg) <span class="text-red-400">*</span></label>
-                <input
-                  id="new-gross-weight"
-                  v-model="form.grossWeightKg"
-                  type="tel"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  class="input-base"
+                <NumericInput
+                  :model-value="form.grossWeightKg"
+                  label="總重 (kg)"
                   placeholder="0"
-                  min="1"
-                  step="1"
-                  required
-                  @focus="$event.target.select()"
+                  :max-digits="6"
+                  @update:model-value="form.grossWeightKg = $event"
                 />
               </div>
 
@@ -120,6 +114,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import { useVehicleStore } from '@/stores/vehicles'
+import NumericInput from '@/components/shared/NumericInput.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },

@@ -2,44 +2,31 @@
   <div class="space-y-2">
     <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">重量資訊</h3>
 
-    <!-- 左右兩欄：左輸入 / 右顯示 -->
     <div class="flex gap-3">
       <!-- ① 左：輸入欄位 -->
       <div class="flex flex-col gap-2 w-[48%]">
         <div>
-          <label class="form-label" for="gross-weight">總重 (kg)</label>
-          <input
-            id="gross-weight"
-            v-model="grossKgModel"
-            type="tel"
-            inputmode="numeric"
-            pattern="[0-9]*"
+          <label class="form-label">總重 (kg)</label>
+          <NumericInput
+            :model-value="grossKg"
+            label="總重 (kg)"
             placeholder="0"
-            min="0"
-            step="1"
-            class="input-base text-xl font-mono"
-            :class="{ 'input-error': weightError }"
             :disabled="isSettled"
-            @focus="$event.target.select()"
+            :input-class="weightError ? 'input-error' : ''"
+            @update:model-value="grossKg = $event"
             @change="emitChange"
           />
         </div>
 
         <div>
-          <label class="form-label" for="tare-weight">空重 (kg)</label>
-          <input
-            id="tare-weight"
-            v-model="tareKgModel"
-            type="tel"
-            inputmode="numeric"
-            pattern="[0-9]*"
+          <label class="form-label">空重 (kg)</label>
+          <NumericInput
+            :model-value="tareKg"
+            label="空重 (kg)"
             placeholder="0"
-            min="0"
-            step="1"
-            class="input-base text-xl font-mono"
-            :class="{ 'input-error': weightError }"
             :disabled="isSettled"
-            @focus="$event.target.select()"
+            :input-class="weightError ? 'input-error' : ''"
+            @update:model-value="tareKg = $event"
             @change="emitChange"
           />
         </div>
@@ -81,8 +68,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useWeightCalc } from '@/composables/useWeightCalc'
+import NumericInput from '@/components/shared/NumericInput.vue'
 
 const props = defineProps({
   grossWeightKg: { type: Number, default: 0 },
@@ -93,16 +81,18 @@ const props = defineProps({
 
 const emit = defineEmits(['update:grossWeightKg', 'update:tareWeightKg'])
 
-const grossKgModel = ref(String(props.grossWeightKg || ''))
-const tareKgModel  = ref(String(props.tareWeightKg  || ''))
+// 內部 number state（與外部 prop 雙向同步）
+const grossKg = ref(props.grossWeightKg || 0)
+const tareKg  = ref(props.tareWeightKg  || 0)
 
-watch(() => props.grossWeightKg, v => { grossKgModel.value = v ? String(v) : '' })
-watch(() => props.tareWeightKg,  v => { tareKgModel.value  = v ? String(v) : '' })
+watch(() => props.grossWeightKg, v => { grossKg.value = v || 0 })
+watch(() => props.tareWeightKg,  v => { tareKg.value  = v || 0 })
 
-const { netKg, netJin, weightError } = useWeightCalc(grossKgModel, tareKgModel, ref(props.unitPrice))
+const unitPriceRef = computed(() => props.unitPrice)
+const { netKg, netJin, weightError } = useWeightCalc(grossKg, tareKg, unitPriceRef)
 
 function emitChange() {
-  emit('update:grossWeightKg', parseFloat(grossKgModel.value) || 0)
-  emit('update:tareWeightKg',  parseFloat(tareKgModel.value)  || 0)
+  emit('update:grossWeightKg', grossKg.value)
+  emit('update:tareWeightKg',  tareKg.value)
 }
 </script>
