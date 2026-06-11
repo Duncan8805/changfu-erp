@@ -98,7 +98,6 @@
                   type="tel"
                   inputmode="numeric"
                   pattern="[0-9]*"
-                  placeholder="1105"
                   class="input-base text-lg font-mono"
                   :disabled="isSettled"
                   @focus="$event.target.select()"
@@ -113,7 +112,6 @@
                 <p class="text-[10px] text-gray-500">/ 台斤</p>
               </div>
             </div>
-                <p class="text-[10px] text-gray-500 mt-1">輸入4位數自動換算，例：1105 → $11.05</p>
           </div>
         </div>
 
